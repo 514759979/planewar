@@ -8,36 +8,63 @@ import random
 class Base(object):
     """基类"""
 
-    def __init__(self, x, y, screen, image_name):
+    def __init__(self, x, y, screen, image_name, width, height):
         self._x = x
         self._y = y
         self.screen = screen
         self.image = pygame.image.load(image_name)
+        self.size_width = width
+        self.size_height = height
+
+    def get_width(self):
+        return self.size_width
+
+    def get_height(self):
+        return self.size_height
+
+    def get_coordinate(self):
+        return self._x, self._y
 
 
 class BasePlane(Base):
     """创建飞机基类"""
 
-    def __init__(self, x, y, screen, image_name):
-        super(BasePlane, self).__init__(x, y, screen, image_name)
+    def __init__(self, x, y, screen, image_name, blowup_images, width, height):
+        super(BasePlane, self).__init__(x, y, screen, image_name, width, height)
         self.bullet_list = []
+        self.blowup_images = blowup_images
 
-    def display(self):
-        self.screen.blit(self.image, (self._x,self._y))
+    def display(self, other):
+        if isinstance(self.image, list):
+            for image in self.image:
+                self.screen.blit(image, (self._x, self._y))
+                self.image.remove(image)
+        else:
+            self.screen.blit(self.image, (self._x, self._y))
 
-        bullets_remove = []
-        for bullet in self.bullet_list:
-            bullet.display()
-            bullet.move()
-            #判断子弹越界后添加到删除子弹列表，不能直接使用remove删除，否则会出现漏删引起BUG
-            #不能在for循环中删除元素，删除元素后，后面的元素就会挤到刚才删除的元素上
-            #指针指到新的元素下，下次循环后就会跳过这个最先挤上来的元素导致漏删。
-            if bullet.judge():
-                bullets_remove.append(bullet)
+            bullets_remove = []
+            for bullet in self.bullet_list:
+                bullet.display()
+                bullet.move()
+                #判断子弹越界后添加到删除子弹列表，不能直接使用remove删除，否则会出现漏删引起BUG
+                #不能在for循环中删除元素，删除元素后，后面的元素就会挤到刚才删除的元素上
+                #指针指到新的元素下，下次循环后就会跳过这个最先挤上来的元素导致漏删。
+                if bullet.judge():
+                    bullets_remove.append(bullet)
 
-        #虽然不可以删除遍历的列表，但是可以删除别的列表，不会导致漏删
-        for bullet in bullets_remove:
-            self.bullet_list.remove(bullet)
+                if bullet.hit(other):
+                    print("hit succeese!")
+                    bullets_remove.append(bullet)
+                    other.blowup()
+
+            #虽然不可以删除遍历的列表，但是可以删除别的列表，不会导致漏删
+            for bullet in bullets_remove:
+                self.bullet_list.remove(bullet)
+
+    def blowup(self):
+        self.image = []
+        for image in self.blowup_images:
+            self.image.append(pygame.image.load(image))
 
 
 class HeroPlane(BasePlane):
@@ -46,7 +73,13 @@ class HeroPlane(BasePlane):
     """
 
     def __init__(self, screen_temp):
-        super(HeroPlane, self).__init__(190, 600, screen_temp, "./feiji/hero1.png")
+        self.blowup_images = [
+                "./feiji/hero_blowup_n1.png",
+                "./feiji/hero_blowup_n2.png",
+                "./feiji/hero_blowup_n3.png",
+                "./feiji/hero_blowup_n4.png"]
+        super(HeroPlane, self).__init__(190, 600, screen_temp,
+                "./feiji/hero1.png", self.blowup_images, 100, 124)
 
     def move_left(self):
         self._x -= 15
@@ -71,8 +104,13 @@ class EnemyPlane(BasePlane):
     """
 
     def __init__(self, screen_temp):
+        self.blowup_images = [
+                "./feiji/enemy0_down1.png",
+                "./feiji/enemy0_down2.png",
+                "./feiji/enemy0_down3.png",
+                "./feiji/enemy0_down4.png"]
         super(EnemyPlane, self).__init__(0, 0, screen_temp,
-                "./feiji/enemy0.png")
+                "./feiji/enemy0.png", self.blowup_images, 51, 39)
         self.direction = "RIGHT"
 
     def move(self):
@@ -106,6 +144,16 @@ class BaseBullet(Base):
         else:
             return False
 
+    def hit(self, plane):
+        plane_x, plane_y = plane.get_coordinate()
+        plane_width = plane.get_width()
+        plane_height = plane.get_height()
+        if (self._x > plane_x) and (self._x < plane_x + plane_width) and \
+                 (self._y > plane_y) and (self._y < plane_y + plane_height):
+            return True
+        else:
+            return False
+
 
 class Bullet(BaseBullet):
     """
@@ -113,10 +161,11 @@ class Bullet(BaseBullet):
     """
 
     def __init__(self, x, y, screen):
-        super(Bullet, self).__init__(x+40, y-10, screen, "./feiji/bullet.png")
+        super(Bullet, self).__init__(x+40, y-10, screen, "./feiji/bullet.png",\
+                22, 22)
 
     def move(self):
-        self._y -= 50
+        self._y -= 30
 
 
 class EnemyBullet(BaseBullet):
@@ -125,7 +174,8 @@ class EnemyBullet(BaseBullet):
     """
 
     def __init__(self, x, y, screen):
-        super(EnemyBullet, self).__init__(x+25, y+40, screen, "./feiji/bullet1.png")
+        super(EnemyBullet, self).__init__(x+25, y+40, screen,\
+                "./feiji/bullet1.png", 9, 21)
 
     def move(self):
         self._y += 15
@@ -149,6 +199,8 @@ def Key_Input(hero):
                 hero.move_down()
             elif event.key == K_SPACE:
                 hero.fire()
+            elif event.key == K_b:
+                hero.blowup()
 
 
 def main():
@@ -165,9 +217,9 @@ def main():
 
     while True:
         screen.blit(background, (0,0))
-        hero.display()
+        hero.display(enemy)
 
-        enemy.display()
+        enemy.display(hero)
         enemy.move()
         enemy.fire()
 
