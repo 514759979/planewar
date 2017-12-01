@@ -32,7 +32,7 @@ class BasePlane(Base):
             #判断子弹越界后添加到删除子弹列表，不能直接使用remove删除，否则会出现漏删引起BUG
             #不能在for循环中删除元素，删除元素后，后面的元素就会挤到刚才删除的元素上
             #指针指到新的元素下，下次循环后就会跳过这个最先挤上来的元素导致漏删。
-            if bullet.jugde():
+            if bullet.judge():
                 bullets_remove.append(bullet)
 
         #虽然不可以删除遍历的列表，但是可以删除别的列表，不会导致漏删
@@ -100,7 +100,7 @@ class BaseBullet(Base):
     def display(self):
         self.screen.blit(self.image, (self._x, self._y))
 
-    def jugde(self):
+    def judge(self):
         if self._y < 0 or self._y > 752:
             return True
         else:
@@ -141,18 +141,13 @@ def Key_Input(hero):
         elif event.type == KEYDOWN:
             if event.key == K_a or event.key == K_LEFT:
                 hero.move_left()
-                print("left")
             elif event.key == K_d or event.key == K_RIGHT:
-                print("right")
                 hero.move_right()
             elif event.key == K_w or event.key == K_UP:
-                print("up")
                 hero.move_up()
             elif event.key == K_s or event.key == K_DOWN:
-                print("down")
                 hero.move_down()
             elif event.key == K_SPACE:
-                print("space")
                 hero.fire()
 
 
